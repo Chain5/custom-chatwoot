@@ -154,6 +154,25 @@ RSpec.describe Contact do
     end
   end
 
+  describe '#contacts_with_same_ip' do
+    let(:account) { create(:account) }
+    let(:contact) { create(:contact, account: account, additional_attributes: { created_at_ip: '203.0.113.7' }) }
+
+    it 'returns other contacts of the same account created from the same IP' do
+      same_ip = create(:contact, account: account, additional_attributes: { created_at_ip: '203.0.113.7' })
+      create(:contact, account: account, additional_attributes: { created_at_ip: '198.51.100.1' })
+      create(:contact, account: create(:account), additional_attributes: { created_at_ip: '203.0.113.7' })
+
+      expect(contact.contacts_with_same_ip).to contain_exactly(same_ip)
+    end
+
+    it 'returns nothing when the contact has no recorded IP' do
+      create(:contact, account: account, additional_attributes: { created_at_ip: '203.0.113.7' })
+
+      expect(create(:contact, account: account).contacts_with_same_ip).to be_empty
+    end
+  end
+
   describe '.resolved_contacts' do
     let(:account) { create(:account) }
 

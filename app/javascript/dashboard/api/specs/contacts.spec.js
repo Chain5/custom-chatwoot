@@ -51,6 +51,11 @@ describe('#ContactsAPI', () => {
       );
     });
 
+    it('#getSameIpContacts', () => {
+      contactAPI.getSameIpContacts(1);
+      expect(axiosMock.get).toHaveBeenCalledWith('/api/v1/contacts/1/same_ip');
+    });
+
     it('#getContactableInboxes', () => {
       contactAPI.getContactableInboxes(1);
       expect(axiosMock.get).toHaveBeenCalledWith(

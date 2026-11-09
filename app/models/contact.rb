@@ -70,6 +70,7 @@ class Contact < ApplicationRecord
   before_save :sync_contact_attributes
   include ContactCompanyAssociation
   include ContactTemporaryBlock
+  include ContactSameIp
 
   enum contact_type: { visitor: 0, lead: 1, customer: 2 }
 

@@ -282,6 +282,7 @@ Rails.application.routes.draw do
               resources :labels, only: [:create, :index]
               resources :notes
               get :attachments, to: 'attachments#index'
+              get :same_ip, to: 'same_ip_contacts#index'
               post :call, on: :member, to: 'calls#create' if ChatwootApp.enterprise?
             end
           end

@@ -36,6 +36,10 @@ class ContactAPI extends ApiClient {
     return axios.get(`${this.url}/${contactId}/conversations`, { params });
   }
 
+  getSameIpContacts(contactId) {
+    return axios.get(`${this.url}/${contactId}/same_ip`);
+  }
+
   getAttachments(contactId, page = 1) {
     return axios.get(`${this.url}/${contactId}/attachments`, {
       params: { page },

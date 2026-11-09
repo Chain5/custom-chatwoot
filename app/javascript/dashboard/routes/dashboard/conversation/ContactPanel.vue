@@ -11,6 +11,7 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import ContactConversations from './ContactConversations.vue';
+import SameIpContacts from './SameIpContacts.vue';
 import ConversationAction from './ConversationAction.vue';
 import ConversationParticipant from './ConversationParticipant.vue';
 import ContactInfo from './contact/ContactInfo.vue';
@@ -249,6 +250,22 @@ onMounted(() => {
               <ContactConversations
                 :contact-id="contact.id"
                 :conversation-id="conversationId"
+              />
+            </AccordionItem>
+          </div>
+          <div v-else-if="element.name === 'same_ip_contacts'">
+            <AccordionItem
+              v-if="contact.id"
+              :title="$t('CONVERSATION_SIDEBAR.ACCORDION.SAME_IP_CONTACTS')"
+              :is-open="isContactSidebarItemOpen('is_same_ip_contacts_open')"
+              compact
+              @toggle="
+                value => toggleSidebarUIState('is_same_ip_contacts_open', value)
+              "
+            >
+              <SameIpContacts
+                v-if="isContactSidebarItemOpen('is_same_ip_contacts_open')"
+                :contact-id="contact.id"
               />
             </AccordionItem>
           </div>

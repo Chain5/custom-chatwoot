@@ -10,6 +10,7 @@ export const DEFAULT_CONVERSATION_SIDEBAR_ITEMS_ORDER = Object.freeze([
   { name: 'contact_notes' },
   { name: 'shared_files' },
   { name: 'previous_conversation' },
+  { name: 'same_ip_contacts' },
   { name: 'conversation_participants' },
   { name: 'linear_issues' },
   { name: 'stripe_customer' },
