@@ -7,6 +7,16 @@ require Rails.root.join 'spec/models/concerns/avatarable_shared.rb'
 RSpec.describe User do
   let!(:user) { create(:user) }
 
+  describe 'default ui_settings' do
+    it 'enables audio alerts for unassigned and own conversations even when the tab is visible' do
+      expect(described_class.new.ui_settings).to eq('enable_audio_alerts' => 'assigned+unassigned', 'always_play_audio_alert' => true)
+    end
+
+    it 'keeps explicitly provided settings' do
+      expect(create(:user, ui_settings: { 'locale' => 'it' }).reload.ui_settings).to eq('locale' => 'it')
+    end
+  end
+
   context 'with validations' do
     it { is_expected.to validate_presence_of(:email) }
   end

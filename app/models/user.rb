@@ -71,6 +71,9 @@ class User < ApplicationRecord
   # remove the column availability from users
   enum :availability, { online: 0, offline: 1, busy: 2 }
 
+  # New agents hear new unassigned chats and replies on their own chats, even with the tab focused.
+  attribute :ui_settings, default: -> { { 'enable_audio_alerts' => 'assigned+unassigned', 'always_play_audio_alert' => true } }
+
   # The validation below has been commented out as it does not
   # work because :validatable in devise overrides this.
   # validates_uniqueness_of :email, scope: :account_id
