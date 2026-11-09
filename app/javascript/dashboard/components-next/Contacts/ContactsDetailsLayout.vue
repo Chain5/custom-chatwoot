@@ -8,6 +8,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Breadcrumb from 'dashboard/components-next/breadcrumb/Breadcrumb.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
+import ContactBlockButton from 'dashboard/components-next/Contacts/ContactBlockButton.vue';
 
 const props = defineProps({
   selectedContact: {
@@ -20,7 +21,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['goToContactsList', 'toggleBlock']);
+const emit = defineEmits(['goToContactsList', 'block', 'unblock']);
 
 const { t } = useI18n();
 const slots = useSlots();
@@ -49,16 +50,8 @@ const breadcrumbItems = computed(() => {
   return items;
 });
 
-const isContactBlocked = computed(() => {
-  return props.selectedContact?.blocked;
-});
-
 const handleBreadcrumbClick = () => {
   emit('goToContactsList');
-};
-
-const toggleBlock = () => {
-  emit('toggleBlock', isContactBlocked.value);
 };
 
 const handleConversationSidebarToggle = () => {
@@ -88,17 +81,12 @@ const closeMobileSidebar = () => {
               @click="handleBreadcrumbClick"
             />
             <div class="flex items-center gap-2">
-              <Button
-                :label="
-                  !isContactBlocked
-                    ? $t('CONTACTS_LAYOUT.HEADER.BLOCK_CONTACT')
-                    : $t('CONTACTS_LAYOUT.HEADER.UNBLOCK_CONTACT')
-                "
-                size="sm"
-                slate
-                :is-loading="isUpdating"
-                :disabled="isUpdating"
-                @click="toggleBlock"
+              <ContactBlockButton
+                :is-blocked="!!selectedContact?.blocked"
+                :blocked-until="selectedContact?.blockedUntil"
+                :is-updating="isUpdating"
+                @block="blockedUntil => emit('block', blockedUntil)"
+                @unblock="emit('unblock')"
               />
               <VoiceCallButton
                 :phone="selectedContact?.phoneNumber"

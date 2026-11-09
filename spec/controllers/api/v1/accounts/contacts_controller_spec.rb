@@ -715,6 +715,28 @@ RSpec.describe 'Contacts API', type: :request do
         expect(response).to have_http_status(:success)
         expect(contact.reload.blocked).to be(false)
       end
+
+      it 'allows blocking a contact until a given time' do
+        blocked_until = 1.day.from_now.change(usec: 0)
+        patch "/api/v1/accounts/#{account.id}/contacts/#{contact.id}",
+              params: { blocked: true, blocked_until: blocked_until.iso8601 },
+              headers: admin.create_new_auth_token,
+              as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(contact.reload.blocked_until).to eq(blocked_until)
+        expect(response.parsed_body['payload']['blocked_until']).to eq(blocked_until.to_i)
+      end
+
+      it 'rejects a block expiry in the past' do
+        patch "/api/v1/accounts/#{account.id}/contacts/#{contact.id}",
+              params: { blocked: true, blocked_until: 1.hour.ago.iso8601 },
+              headers: admin.create_new_auth_token,
+              as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(contact.reload.blocked).to be(false)
+      end
     end
   end
 

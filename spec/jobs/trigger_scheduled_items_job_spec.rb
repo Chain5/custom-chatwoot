@@ -15,6 +15,11 @@ RSpec.describe TriggerScheduledItemsJob do
     described_class.perform_now
   end
 
+  it 'triggers Contacts::UnblockExpiredContactsJob' do
+    expect(Contacts::UnblockExpiredContactsJob).to receive(:perform_later).once
+    described_class.perform_now
+  end
+
   it 'triggers Notification::ReopenSnoozedNotificationsJob' do
     expect(Notification::ReopenSnoozedNotificationsJob).to receive(:perform_later).once
     described_class.perform_now

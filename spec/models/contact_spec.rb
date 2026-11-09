@@ -124,6 +124,36 @@ RSpec.describe Contact do
     end
   end
 
+  describe 'temporary block' do
+    it 'rejects a block expiry in the past' do
+      contact = build(:contact, blocked: true, blocked_until: 1.minute.ago)
+
+      expect(contact).not_to be_valid
+      expect(contact.errors[:blocked_until]).to be_present
+    end
+
+    it 'clears the expiry when the contact is unblocked' do
+      contact = create(:contact, blocked: true, blocked_until: 1.hour.from_now)
+
+      contact.update!(blocked: false)
+
+      expect(contact.reload.blocked_until).to be_nil
+    end
+
+    it 'treats a block without expiry as permanent' do
+      contact = create(:contact, blocked: true)
+
+      expect(described_class.with_expired_block).not_to include(contact)
+    end
+
+    it 'includes the expiry in push_event_data' do
+      expiry = 1.hour.from_now
+      contact = create(:contact, blocked: true, blocked_until: expiry)
+
+      expect(contact.push_event_data[:blocked_until]).to eq(expiry.to_i)
+    end
+  end
+
   describe '.resolved_contacts' do
     let(:account) { create(:account) }
 

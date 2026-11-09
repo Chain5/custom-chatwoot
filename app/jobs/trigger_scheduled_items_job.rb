@@ -11,6 +11,9 @@ class TriggerScheduledItemsJob < ApplicationJob
     # Job to reopen snoozed conversations
     Conversations::ReopenSnoozedConversationsJob.perform_later
 
+    # Job to lift temporary contact blocks
+    Contacts::UnblockExpiredContactsJob.perform_later
+
     # Job to reopen snoozed notifications
     Notification::ReopenSnoozedNotificationsJob.perform_later
 

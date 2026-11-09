@@ -155,6 +155,8 @@ en:
         invalid: Invalid email
       phone_number:
         invalid: should be in e164 format
+      blocked_until:
+        past: must be in the future
     companies:
       domain:
         invalid: must be a valid domain name

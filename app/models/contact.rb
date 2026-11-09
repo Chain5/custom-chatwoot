@@ -7,6 +7,7 @@
 #  id                    :integer          not null, primary key
 #  additional_attributes :jsonb
 #  blocked               :boolean          default(FALSE), not null
+#  blocked_until         :datetime
 #  contact_type          :integer          default("visitor")
 #  country_code          :string           default("")
 #  custom_attributes     :jsonb
@@ -68,6 +69,7 @@ class Contact < ApplicationRecord
   after_destroy_commit :dispatch_destroy_event
   before_save :sync_contact_attributes
   include ContactCompanyAssociation
+  include ContactTemporaryBlock
 
   enum contact_type: { visitor: 0, lead: 1, customer: 2 }
 
@@ -149,6 +151,7 @@ class Contact < ApplicationRecord
       phone_number: phone_number,
       thumbnail: avatar_url,
       blocked: blocked,
+      blocked_until: blocked_until&.to_i,
       contact_type: contact_type,
       type: 'contact'
     }

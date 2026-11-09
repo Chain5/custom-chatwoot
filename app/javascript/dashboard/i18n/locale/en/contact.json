@@ -303,6 +303,13 @@
       "SEND_MESSAGE": "Send message",
       "BLOCK_CONTACT": "Block contact",
       "UNBLOCK_CONTACT": "Unblock contact",
+      "BLOCKED_UNTIL": "Blocked until {date}",
+      "BLOCK_DURATION": {
+        "ONE_HOUR": "For 1 hour",
+        "ONE_DAY": "For 24 hours",
+        "SEVEN_DAYS": "For 7 days",
+        "PERMANENT": "Permanently"
+      },
       "BREADCRUMB": {
         "CONTACTS": "Contacts"
       },
