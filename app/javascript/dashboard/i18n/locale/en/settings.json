@@ -139,9 +139,14 @@
         "DEFAULT_TONE": {
           "TITLE": "Alert tone:"
         },
+        "FREQUENCY": {
+          "TITLE": "Play a sound:",
+          "EVERY_MESSAGE": "For every customer message",
+          "FIRST_MESSAGE": "Only for the first message of a new conversation",
+          "NEVER": "Never"
+        },
         "CONDITIONS": {
           "TITLE": "Alert conditions:",
-          "CONDITION_ONE": "Send audio alerts only if the browser window is not active",
           "CONDITION_TWO": "Send alerts every 30s until all the assigned conversations are read"
         },
         "SOUND_PERMISSION_ERROR": "Autoplay is disabled in your browser. To hear alerts automatically, enable sound permission in your browser settings or interact with the page.",

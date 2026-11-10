@@ -17,7 +17,7 @@ export const initializeAnalyticsEvents = () => {
 export const initializeAudioAlerts = user => {
   const { ui_settings: uiSettings } = user || {};
   const {
-    always_play_audio_alert: alwaysPlayAudioAlert,
+    audio_alert_frequency: alertFrequency,
     enable_audio_alerts: audioAlertType,
     alert_if_unread_assigned_conversation_exist: alertIfUnreadConversationExist,
     notification_tone: audioAlertTone,
@@ -29,7 +29,7 @@ export const initializeAudioAlerts = user => {
     currentUser: user,
     audioAlertType: audioAlertType || 'none',
     audioAlertTone: audioAlertTone || 'ding',
-    alwaysPlayAudioAlert: alwaysPlayAudioAlert || false,
+    alertFrequency,
     alertIfUnreadConversationExist: alertIfUnreadConversationExist || false,
   });
 };

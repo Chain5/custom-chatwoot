@@ -1,5 +1,4 @@
 import { DashboardAudioNotificationHelper } from '../DashboardAudioNotificationHelper';
-import WindowVisibilityHelper from '../WindowVisibilityHelper';
 import { showBadgeOnFavicon } from '../faviconHelper';
 
 vi.mock('dashboard/store', () => ({ default: {} }));
@@ -18,7 +17,7 @@ describe('dashboard bot handoff alerts', () => {
     helper.currentUser = { id: 7 };
     helper.notificationConfig = {
       audioAlertType: ['all'],
-      playAlertOnlyWhenHidden: true,
+      alertFrequency: 'every_message',
       alertIfUnreadConversationExist: true,
     };
     conversation = {
@@ -27,10 +26,6 @@ describe('dashboard bot handoff alerts', () => {
     };
     vi.spyOn(helper, 'playAudioAlert').mockResolvedValue();
     vi.spyOn(helper.store, 'hasConversationPermission').mockReturnValue(true);
-    vi.spyOn(helper.store, 'isMessageFromCurrentConversation').mockReturnValue(
-      false
-    );
-    vi.spyOn(WindowVisibilityHelper, 'isWindowVisible').mockReturnValue(false);
   });
 
   afterEach(() => {
@@ -150,22 +145,140 @@ describe('dashboard bot handoff alerts', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('plays even for the conversation currently on screen', () => {
+    vi.spyOn(helper.store, 'isMessageFromPendingConversation').mockReturnValue(
+      false
+    );
+    vi.spyOn(helper.store, 'isMessageFromCurrentConversation').mockReturnValue(
+      true
+    );
+
+    helper.onNewMessage({
+      conversation_id: conversation.id,
+      message_type: 0,
+      sender: { id: 99, type: 'contact' },
+    });
+
+    expect(helper.playAudioAlert).toHaveBeenCalledOnce();
+  });
+});
+
+describe('dashboard alert frequency', () => {
+  let helper;
+
+  const customerMessage = {
+    conversation_id: 12,
+    message_type: 0,
+    sender: { id: 99, type: 'contact' },
+  };
+
+  const newConversation = (overrides = {}) => ({
+    id: 12,
+    status: 'open',
+    meta: { assignee_type: null, assignee: null },
+    messages: [customerMessage],
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    helper = new DashboardAudioNotificationHelper({});
+    helper.currentUser = { id: 7 };
+    helper.notificationConfig = {
+      audioAlertType: ['all'],
+      alertFrequency: 'every_message',
+      alertIfUnreadConversationExist: false,
+    };
+    vi.spyOn(helper, 'playAudioAlert').mockResolvedValue();
+    vi.spyOn(helper.store, 'hasConversationPermission').mockReturnValue(true);
+    vi.spyOn(helper.store, 'isMessageFromPendingConversation').mockReturnValue(
+      false
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
+  it('alerts for every customer message but not for new conversations by default', () => {
+    helper.onConversationCreated(newConversation());
+    helper.onNewMessage(customerMessage);
+    helper.onNewMessage(customerMessage);
+
+    expect(helper.playAudioAlert).toHaveBeenCalledTimes(2);
+  });
+
+  it('alerts for a contact whose ID matches the current agent', () => {
+    helper.onNewMessage({
+      conversation_id: 12,
+      message_type: 0,
+      sender_type: 'Contact',
+      sender_id: 7,
+      sender: { id: 7, type: 'contact' },
+    });
+
+    expect(helper.playAudioAlert).toHaveBeenCalledOnce();
+  });
+
+  it('stays silent for the current agent own messages', () => {
+    helper.onNewMessage({
+      conversation_id: 12,
+      message_type: 1,
+      private: true,
+      sender_type: 'User',
+      sender_id: 7,
+      sender: { id: 7, type: 'user' },
+    });
+
+    expect(helper.playAudioAlert).not.toHaveBeenCalled();
+  });
+
+  it('alerts once per new conversation in first-message mode', () => {
+    helper.notificationConfig.alertFrequency = 'first_message';
+
+    helper.onConversationCreated(newConversation());
+    helper.onNewMessage(customerMessage);
+    helper.onNewMessage(customerMessage);
+
+    expect(helper.playAudioAlert).toHaveBeenCalledOnce();
+  });
+
   it.each([
-    [true, false, false],
-    [false, true, false],
-    [false, false, true],
-  ])(
-    'respects active-window preferences (%s, %s)',
-    (hiddenOnly, isSelected, shouldAlert) => {
-      WindowVisibilityHelper.isWindowVisible.mockReturnValue(true);
-      helper.notificationConfig.playAlertOnlyWhenHidden = hiddenOnly;
-      helper.store.isMessageFromCurrentConversation.mockReturnValue(isSelected);
+    ['started by an agent', { messages: [{ message_type: 1 }] }],
+    ['without messages', { messages: [] }],
+    ['handled by a bot', { status: 'pending' }],
+    ['from a blocked contact', { status: 'resolved' }],
+  ])('stays silent for a new conversation %s', (_, overrides) => {
+    helper.notificationConfig.alertFrequency = 'first_message';
 
-      helper.onConversationBotHandoff(conversation);
+    helper.onConversationCreated(newConversation(overrides));
 
-      expect(helper.playAudioAlert).toHaveBeenCalledTimes(shouldAlert ? 1 : 0);
-      expect(showBadgeOnFavicon).toHaveBeenCalledTimes(shouldAlert ? 1 : 0);
-      expect(vi.getTimerCount()).toBe(shouldAlert ? 1 : 0);
-    }
-  );
+    expect(helper.playAudioAlert).not.toHaveBeenCalled();
+  });
+
+  it('respects the conversation filters in first-message mode', () => {
+    helper.notificationConfig.alertFrequency = 'first_message';
+    helper.notificationConfig.audioAlertType = ['assigned'];
+
+    helper.onConversationCreated(newConversation());
+    helper.onConversationCreated(
+      newConversation({ meta: { assignee_type: 'User', assignee: { id: 7 } } })
+    );
+
+    expect(helper.playAudioAlert).toHaveBeenCalledOnce();
+  });
+
+  it('never alerts when muted, including bot handoffs and reminders', () => {
+    vi.useFakeTimers();
+    helper.notificationConfig.alertFrequency = 'never';
+    helper.notificationConfig.alertIfUnreadConversationExist = true;
+
+    helper.onConversationCreated(newConversation());
+    helper.onNewMessage(customerMessage);
+    helper.onConversationBotHandoff(newConversation());
+
+    expect(helper.playAudioAlert).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
 });

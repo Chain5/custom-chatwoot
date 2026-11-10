@@ -3,7 +3,6 @@ import conversationModule from 'dashboard/store/modules/conversations';
 import Connector from '../actionCable';
 import alerts from '../AudioAlerts/DashboardAudioNotificationHelper';
 import AudioNotificationStore from '../AudioAlerts/AudioNotificationStore';
-import WindowVisibilityHelper from '../AudioAlerts/WindowVisibilityHelper';
 import { showBadgeOnFavicon } from '../AudioAlerts/faviconHelper';
 
 vi.mock('@rails/actioncable', () => ({
@@ -64,12 +63,11 @@ describe('handoff event → conversation store → audible alert', () => {
     };
     alerts.notificationConfig = {
       audioAlertType: ['mine'],
-      playAlertOnlyWhenHidden: true,
+      alertFrequency: 'every_message',
       alertIfUnreadConversationExist: false,
     };
     play = vi.fn().mockResolvedValue();
     alerts.audioConfig.audio = { play };
-    vi.spyOn(WindowVisibilityHelper, 'isWindowVisible').mockReturnValue(false);
     handoff = {
       id: 12,
       account_id: 1,
@@ -375,25 +373,14 @@ describe('handoff event → conversation store → audible alert', () => {
     }
   );
 
-  it.each(['hidden-only', 'selected conversation', 'no permission'])(
-    'rechecks %s at the deadline',
-    reason => {
-      connector.onReceived({
-        event: 'conversation.bot_handoff',
-        data: handoff,
-      });
-      connector.onReceived({ event: 'assignee.changed', data: assignment });
-      if (reason === 'no permission') {
-        alerts.currentUser.accounts[0].permissions = [];
-      } else {
-        WindowVisibilityHelper.isWindowVisible.mockReturnValue(true);
-        if (reason === 'selected conversation') {
-          alerts.notificationConfig.playAlertOnlyWhenHidden = false;
-          store.state.selectedChatId = 12;
-        }
-      }
-      vi.advanceTimersByTime(HANDOFF_ALERT_WINDOW_MS);
-      expect(play).not.toHaveBeenCalled();
-    }
-  );
+  it('rechecks permissions at the deadline', () => {
+    connector.onReceived({
+      event: 'conversation.bot_handoff',
+      data: handoff,
+    });
+    connector.onReceived({ event: 'assignee.changed', data: assignment });
+    alerts.currentUser.accounts[0].permissions = [];
+    vi.advanceTimersByTime(HANDOFF_ALERT_WINDOW_MS);
+    expect(play).not.toHaveBeenCalled();
+  });
 });

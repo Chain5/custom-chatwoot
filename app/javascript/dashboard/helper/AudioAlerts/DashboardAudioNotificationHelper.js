@@ -2,7 +2,11 @@ import { MESSAGE_TYPE } from 'shared/constants/messages';
 import { showBadgeOnFavicon } from './faviconHelper';
 import { initFaviconSwitcher } from './faviconHelper';
 
-import { EVENT_TYPES } from 'dashboard/routes/dashboard/settings/profile/constants.js';
+import {
+  AUDIO_ALERT_FREQUENCY,
+  DEFAULT_AUDIO_ALERT_FREQUENCY,
+  EVENT_TYPES,
+} from 'dashboard/routes/dashboard/settings/profile/constants.js';
 import GlobalStore from 'dashboard/store';
 import AudioNotificationStore from './AudioNotificationStore';
 import {
@@ -10,8 +14,8 @@ import {
   isConversationUnassigned,
   isMessageFromCurrentUser,
 } from './AudioMessageHelper';
-import WindowVisibilityHelper from './WindowVisibilityHelper';
 import { useAlert } from 'dashboard/composables';
+import wootConstants from 'dashboard/constants/globals';
 
 const NOTIFICATION_TIME = 30000;
 const ALERT_DURATION = 10000;
@@ -28,7 +32,7 @@ export class DashboardAudioNotificationHelper {
 
     this.notificationConfig = {
       audioAlertType: DEFAULT_ALERT_TYPE,
-      playAlertOnlyWhenHidden: true,
+      alertFrequency: DEFAULT_AUDIO_ALERT_FREQUENCY,
       alertIfUnreadConversationExist: false,
     };
 
@@ -68,7 +72,7 @@ export class DashboardAudioNotificationHelper {
 
   set = ({
     currentUser,
-    alwaysPlayAudioAlert,
+    alertFrequency = DEFAULT_AUDIO_ALERT_FREQUENCY,
     alertIfUnreadConversationExist,
     audioAlertType = DEFAULT_ALERT_TYPE,
     audioAlertTone = DEFAULT_TONE,
@@ -76,7 +80,7 @@ export class DashboardAudioNotificationHelper {
     this.notificationConfig = {
       ...this.notificationConfig,
       audioAlertType: audioAlertType.split('+').filter(Boolean),
-      playAlertOnlyWhenHidden: !alwaysPlayAudioAlert,
+      alertFrequency,
       alertIfUnreadConversationExist: alertIfUnreadConversationExist,
     };
 
@@ -97,15 +101,16 @@ export class DashboardAudioNotificationHelper {
     this.playAudioEvery30Seconds();
   };
 
-  shouldPlayAlert = () => {
-    if (this.notificationConfig.playAlertOnlyWhenHidden) {
-      return !WindowVisibilityHelper.isWindowVisible();
-    }
-    return true;
+  isMuted = () => {
+    const { audioAlertType, alertFrequency } = this.notificationConfig;
+    return (
+      audioAlertType.includes('none') ||
+      alertFrequency === AUDIO_ALERT_FREQUENCY.NEVER
+    );
   };
 
   executeRecurringNotification = () => {
-    if (this.store.hasUnreadConversation() && this.shouldPlayAlert()) {
+    if (this.store.hasUnreadConversation()) {
       this.playAudioAlert();
       showBadgeOnFavicon();
     }
@@ -127,11 +132,10 @@ export class DashboardAudioNotificationHelper {
   };
 
   playAudioEvery30Seconds = () => {
-    const { audioAlertType, alertIfUnreadConversationExist } =
-      this.notificationConfig;
+    const { alertIfUnreadConversationExist } = this.notificationConfig;
 
     //  Audio alert is disabled dismiss the timer
-    if (audioAlertType.includes('none')) return;
+    if (this.isMuted()) return;
 
     // If unread conversation flag is disabled, dismiss the timer
     if (!alertIfUnreadConversationExist) return;
@@ -141,7 +145,7 @@ export class DashboardAudioNotificationHelper {
 
   shouldNotifyOnMessage = message => {
     const { audioAlertType } = this.notificationConfig;
-    if (audioAlertType.includes('none')) return false;
+    if (this.isMuted()) return false;
     if (audioAlertType.includes('all')) return true;
 
     const assignedToMe = isConversationAssignedToMe(
@@ -171,18 +175,15 @@ export class DashboardAudioNotificationHelper {
   triggerAlert = message => {
     if (!this.store.hasConversationPermission(this.currentUser)) return;
     if (!this.shouldNotifyOnMessage(message)) return;
-    if (WindowVisibilityHelper.isWindowVisible()) {
-      if (this.store.isMessageFromCurrentConversation(message)) return;
-      if (this.notificationConfig.playAlertOnlyWhenHidden) return;
-    }
 
+    // Alerts play even when the dashboard is focused or the conversation is open
     this.playAudioAlert();
     showBadgeOnFavicon();
     this.playAudioEvery30Seconds();
   };
 
-  onConversationBotHandoff = conversation => {
-    // Adapt the handoff once to the existing audio-filter contract. Bot IDs
+  triggerConversationAlert = conversation => {
+    // Adapt the conversation once to the existing audio-filter contract. Bot IDs
     // must not be treated as human assignees, even when their IDs overlap.
     this.triggerAlert({
       conversation_id: conversation.id,
@@ -195,7 +196,36 @@ export class DashboardAudioNotificationHelper {
     });
   };
 
+  onConversationBotHandoff = conversation => {
+    this.triggerConversationAlert(conversation);
+  };
+
+  // In first-message mode a new chat alerts once, when the customer opens it. The widget
+  // creates the conversation together with its first message, so the event carries it.
+  onConversationCreated = conversation => {
+    if (
+      this.notificationConfig.alertFrequency !==
+      AUDIO_ALERT_FREQUENCY.FIRST_MESSAGE
+    ) {
+      return;
+    }
+    if (conversation.status !== wootConstants.STATUS_TYPE.OPEN) return;
+
+    const [firstMessage] = conversation.messages || [];
+    if (firstMessage?.message_type !== MESSAGE_TYPE.INCOMING) return;
+
+    this.triggerConversationAlert(conversation);
+  };
+
   onNewMessage = message => {
+    // First-message mode alerts from onConversationCreated instead
+    if (
+      this.notificationConfig.alertFrequency !==
+      AUDIO_ALERT_FREQUENCY.EVERY_MESSAGE
+    ) {
+      return;
+    }
+
     // Captain notes are context, not requests for attention. Only the dedicated
     // handoff event alerts agents, regardless of when its explanatory note arrives.
     if (message.private && message.sender?.type === 'captain_assistant') return;

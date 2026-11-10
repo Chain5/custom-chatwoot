@@ -60,3 +60,12 @@ export const ALERT_EVENTS = [
     label: 'notme',
   },
 ];
+
+export const AUDIO_ALERT_FREQUENCY = {
+  EVERY_MESSAGE: 'every_message',
+  FIRST_MESSAGE: 'first_message',
+  NEVER: 'never',
+};
+
+export const DEFAULT_AUDIO_ALERT_FREQUENCY =
+  AUDIO_ALERT_FREQUENCY.EVERY_MESSAGE;

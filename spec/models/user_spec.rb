@@ -8,8 +8,8 @@ RSpec.describe User do
   let!(:user) { create(:user) }
 
   describe 'default ui_settings' do
-    it 'enables audio alerts for unassigned and own conversations even when the tab is visible' do
-      expect(described_class.new.ui_settings).to eq('enable_audio_alerts' => 'assigned+unassigned', 'always_play_audio_alert' => true)
+    it 'enables audio alerts for unassigned and own conversations' do
+      expect(described_class.new.ui_settings).to eq('enable_audio_alerts' => 'assigned+unassigned')
     end
 
     it 'keeps explicitly provided settings' do

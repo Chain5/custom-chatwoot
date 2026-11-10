@@ -4,6 +4,11 @@ import { useUISettings } from 'dashboard/composables/useUISettings';
 import AudioAlertTone from './AudioAlertTone.vue';
 import AudioAlertEvent from './AudioAlertEvent.vue';
 import AudioAlertCondition from './AudioAlertCondition.vue';
+import FormSelect from 'v3/components/Form/Select.vue';
+import {
+  AUDIO_ALERT_FREQUENCY,
+  DEFAULT_AUDIO_ALERT_FREQUENCY,
+} from './constants';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useStore } from 'dashboard/composables/store';
 const store = useStore();
@@ -19,7 +24,7 @@ const { uiSettings, updateUISettings } = useUISettings();
 
 const { t } = useI18n();
 const audioAlert = ref('');
-const playAudioWhenTabIsInactive = ref(false);
+const alertFrequency = ref(DEFAULT_AUDIO_ALERT_FREQUENCY);
 const alertIfUnreadConversationExist = ref(false);
 const alertTone = ref('ding');
 const audioAlertConditions = ref([]);
@@ -29,16 +34,11 @@ const initializeNotificationUISettings = newUISettings => {
   const updatedUISettings = camelcaseKeys(newUISettings);
 
   audioAlert.value = updatedUISettings.enableAudioAlerts;
-  playAudioWhenTabIsInactive.value = !updatedUISettings.alwaysPlayAudioAlert;
+  alertFrequency.value =
+    updatedUISettings.audioAlertFrequency || DEFAULT_AUDIO_ALERT_FREQUENCY;
   alertIfUnreadConversationExist.value =
     updatedUISettings.alertIfUnreadAssignedConversationExist;
   audioAlertConditions.value = [
-    {
-      id: 'audio1',
-      label: t(`${i18nKeyPrefix}.CONDITIONS.CONDITION_ONE`),
-      model: playAudioWhenTabIsInactive.value,
-      value: 'tab_is_inactive',
-    },
     {
       id: 'audio2',
       label: t(`${i18nKeyPrefix}.CONDITIONS.CONDITION_TWO`),
@@ -73,12 +73,33 @@ const handAudioAlertChange = value => {
     enable_audio_alerts: value,
   });
 };
+const alertFrequencyOptions = computed(() => [
+  {
+    value: AUDIO_ALERT_FREQUENCY.EVERY_MESSAGE,
+    label: t(
+      'PROFILE_SETTINGS.FORM.AUDIO_NOTIFICATIONS_SECTION.FREQUENCY.EVERY_MESSAGE'
+    ),
+  },
+  {
+    value: AUDIO_ALERT_FREQUENCY.FIRST_MESSAGE,
+    label: t(
+      'PROFILE_SETTINGS.FORM.AUDIO_NOTIFICATIONS_SECTION.FREQUENCY.FIRST_MESSAGE'
+    ),
+  },
+  {
+    value: AUDIO_ALERT_FREQUENCY.NEVER,
+    label: t(
+      'PROFILE_SETTINGS.FORM.AUDIO_NOTIFICATIONS_SECTION.FREQUENCY.NEVER'
+    ),
+  },
+]);
+
+const handleAlertFrequencyChange = value => {
+  alertFrequency.value = value;
+  handleAudioConfigChange({ audio_alert_frequency: value });
+};
 const handleAudioAlertConditions = (id, value) => {
-  if (id === 'tab_is_inactive') {
-    handleAudioConfigChange({
-      always_play_audio_alert: !value,
-    });
-  } else if (id === 'conversations_are_read') {
+  if (id === 'conversations_are_read') {
     handleAudioConfigChange({
       alert_if_unread_assigned_conversation_exist: value,
     });
@@ -96,6 +117,25 @@ const handleAudioToneChange = value => {
       :label="$t(`${i18nKeyPrefix}.DEFAULT_TONE.TITLE`)"
       @change="handleAudioToneChange"
     />
+
+    <FormSelect
+      :model-value="alertFrequency"
+      name="audioAlertFrequency"
+      spacing="compact"
+      :label="
+        $t('PROFILE_SETTINGS.FORM.AUDIO_NOTIFICATIONS_SECTION.FREQUENCY.TITLE')
+      "
+      @update:model-value="handleAlertFrequencyChange"
+    >
+      <option
+        v-for="option in alertFrequencyOptions"
+        :key="option.value"
+        :value="option.value"
+        :selected="option.value === alertFrequency"
+      >
+        {{ option.label }}
+      </option>
+    </FormSelect>
 
     <AudioAlertEvent
       :label="$t(`${i18nKeyPrefix}.ALERT_TYPE.TITLE`)"
